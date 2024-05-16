@@ -18,11 +18,8 @@ export class AppService {
     },
   });
 
-  constructor() {
-    // 每天8点执行爬虫和发送邮件任务
-    cron.schedule('0 8 * * *', async () => {
-      await this.crawlAndSendEmail();
-    });
+  async onModuleInit() {
+    await this.crawlAndSendEmail();
   }
 
   async crawlAndSendEmail() {
@@ -50,7 +47,7 @@ export class AppService {
     );
 
     const allJobs = [];
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= totalPage; i++) {
       await page.goto(
         'https://www.zhipin.com/web/geek/job?query=%E5%89%8D%E7%AB%AF&city=101280600&stage=807,808&salary=406&page=' +
           i,
@@ -109,6 +106,16 @@ export class AppService {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Recruitment Information');
 
+    // 对招聘信息按公司名称排序
+    allJobDetails.sort((a, b) => a.company.localeCompare(b.company));
+
+    // 对薪资排序
+    allJobDetails.sort((a, b) => {
+      const salaryA = parseFloat(a.salary.replace(/[^0-9.-]+/g, ''));
+      const salaryB = parseFloat(b.salary.replace(/[^0-9.-]+/g, ''));
+      return salaryA - salaryB;
+    });
+
     // 设置列宽
     worksheet.getColumn('A').width = 15; // 名称
     worksheet.getColumn('B').width = 20; // 区域
@@ -140,8 +147,8 @@ export class AppService {
         { text: '详情', hyperlink: job.link },
       ]);
 
+      row.getCell('E').alignment = { wrapText: true }; // 设置职位描述自动换行
       row.getCell('F').font = { color: { argb: '0000FF' }, underline: true }; // 设置链接字体为蓝色和下划线
-      row.getCell('E').alignment = { wrapText: true }; // 設置職位描述自動換行
     });
 
     // 将工作簿写入缓冲区
