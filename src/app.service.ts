@@ -1,9 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import puppeteer from 'puppeteer';
 import * as cron from 'node-cron';
 import * as ExcelJS from 'exceljs';
 import * as nodemailer from 'nodemailer';
-import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class AppService {
@@ -19,17 +18,12 @@ export class AppService {
     },
   });
 
-  async onModuleInit() {
-    await this.crawlAndSendEmail();
+  constructor() {
+    // 每天8点执行爬虫和发送邮件任务
+    cron.schedule('0 8 * * *', async () => {
+      await this.crawlAndSendEmail();
+    });
   }
-
-  //   constructor() {
-  // 每天8点执行爬虫和发送邮件任务
-  // cron.schedule('0 8 * * *', async () => {
-  //   await this.crawlAndSendEmail();
-  // });
-  //     this.crawlAndSendEmail();
-  //   }
 
   async crawlAndSendEmail() {
     const browser = await puppeteer.launch({
@@ -117,9 +111,9 @@ export class AppService {
 
     // 设置列宽
     worksheet.getColumn('A').width = 15; // 名称
-    worksheet.getColumn('B').width = 30; // 区域
-    worksheet.getColumn('C').width = 10; // 薪资
-    worksheet.getColumn('D').width = 10; // 公司
+    worksheet.getColumn('B').width = 20; // 区域
+    worksheet.getColumn('C').width = 15; // 薪资
+    worksheet.getColumn('D').width = 20; // 公司
     worksheet.getColumn('E').width = 60; // 描述
     worksheet.getColumn('F').width = 10; // 链接
 
@@ -147,6 +141,7 @@ export class AppService {
       ]);
 
       row.getCell('F').font = { color: { argb: '0000FF' }, underline: true }; // 设置链接字体为蓝色和下划线
+      row.getCell('E').alignment = { wrapText: true }; // 設置職位描述自動換行
     });
 
     // 将工作簿写入缓冲区
@@ -170,7 +165,4 @@ export class AppService {
 
     await browser.close();
   }
-
-  @Inject(EntityManager)
-  private entityManager: EntityManager;
 }
